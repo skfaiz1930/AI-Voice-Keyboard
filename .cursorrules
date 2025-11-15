@@ -1,0 +1,199 @@
+# ================================
+# Cursor Rules for AI Voice Keyboard App
+# Next.js 14 • Prisma • PostgreSQL • NextAuth • ShadCN • Tailwind • Zod
+# ================================
+
+# --- General Code Style ---------------------------
+- Always use TypeScript with strict types.
+- Never use `any`. If needed, infer types with `z.infer`.
+- Prefer async/await and avoid Promises.then chains.
+- Use named exports for utility modules.
+- Always use ES Modules imports, no require().
+
+# --- Project Architecture --------------------------
+- Follow the project structure:
+  app/
+    (auth)/
+    (dashboard)/
+      history/
+      dictionary/
+    api/
+  components/
+    ui/
+    audio/
+    transcription/
+    dictionary/
+  lib/
+  prisma/
+  public/
+
+- UI code must go inside /components or /app routes.
+- Server-side logic belongs in:
+  - /app/api route handlers (Next.js 14)
+  - /lib/server
+  - /prisma
+
+- Do NOT mix server and client code.
+  - Files containing `"use client"` should not contain server logic.
+  - No DB queries inside client components.
+
+# --- Backend Rules (API Routes) ----------------------
+- Always use Next.js Route Handlers: /app/api/<route>/route.ts
+- Every API route must include:
+  - Zod validation for body/query params
+  - try/catch
+  - Returning JSON via `NextResponse.json()`
+  - Early returns for invalid cases
+  - Authentication check when required
+- Never respond with raw errors; return JSON error objects with message + code.
+
+- API Response Shape:
+  {
+    "success": boolean,
+    "data"?: any,
+    "error"?: {
+      "message": string,
+      "code"?: number
+    }
+  }
+
+# --- Authentication Rules ---------------------------
+- Use NextAuth.js with:
+  - Credentials Provider or OAuth
+  - Prisma Adapter
+- Use `getServerSession()` inside server routes only.
+- Never expose user passwords or tokens anywhere.
+
+# --- Database Rules (Prisma) -------------------------
+- All migrations must go through Prisma.
+- Never write raw SQL unless necessary.
+- Use Prisma Client via /lib/db.ts:
+  import { prisma } from "@/lib/db";
+
+- Data validation flow:
+  1. Zod validates input
+  2. Prisma validates schema rules
+  3. Use `select` fields to avoid returning sensitive data
+
+- Naming conventions:
+  - Model names: PascalCase (User, Transcription, DictionaryEntry)
+  - Fields: camelCase (userId, createdAt)
+  - Enums: PascalCase
+
+# --- Dictionary Rules -------------------------------
+- Dictionary entries are user-scoped.
+- Enforce unique key (userId + word).
+- Apply dictionary replacement after transcription:
+  - Match whole words (regex: /\bword\b/gi)
+  - Preserve case if possible
+- Dictionary API must require authentication.
+
+# --- Transcription Rules ----------------------------
+- Use Deepgram or Whisper API through a wrapper function in /lib/transcribe.ts.
+- Audio upload limits:
+  - Max 25 MB per file
+  - Allowed types: audio/mp3, audio/wav, audio/mpeg, audio/webm
+- Always sanitize prompts and dictionary terms.
+- Apply dictionary replacements after raw transcription.
+- Save transcription to DB unless user disables auto-save.
+
+# --- Frontend UI Rules -------------------------------
+- All components must use ShadCN UI when applicable.
+- Use Tailwind CSS for styling.
+- No inline CSS except dynamic styles.
+- Prefer server components where possible.
+- Client components only when:
+  - Audio recording
+  - Form interactions
+  - Real-time UI updates
+
+- Component Naming:
+  - AudioRecorder.tsx
+  - TranscriptionCard.tsx
+  - DictionaryList.tsx
+  - DictionaryForm.tsx
+
+- Never put heavy logic inside client components.
+  Use helper functions from /lib.
+
+# --- Validation Rules -------------------------------
+- All incoming data must be validated using Zod.
+- Create schema files in /lib/validations/.
+- For forms: integrate React Hook Form + ZodResolver
+- All API inputs must be parsed:
+  const parsed = Schema.safeParse(await req.json());
+
+# --- Error Handling -------------------------------
+- Must always use try/catch in API routes.
+- Return structured errors:
+  {
+    success: false,
+    error: { message: "Invalid input", code: 400 }
+  }
+- Do not expose internal errors.
+- Log server-side errors using console.error (or a logger).
+
+# --- Naming Conventions -----------------------------
+- Files: kebab-case (transcription-card.tsx)
+- Components: PascalCase
+- Hooks: useCamelCase
+- API routes: lowercase folders
+- Environment variables: UPPER_SNAKE_CASE
+
+# --- Environment Variables --------------------------
+Required:
+  DATABASE_URL
+  NEXTAUTH_SECRET
+  NEXTAUTH_URL
+  OPENAI_API_KEY or DEEPGRAM_API_KEY
+  STORAGE_BUCKET (if used)
+
+- Validate required environment variables at startup.
+- Do not commit .env files.
+
+# --- Cursor Branching Rules -------------------------
+- For major features, create new branches:
+  - feature/transcription
+  - feature/dictionary
+  - feature/auth
+  - fix/api-error-handling
+
+- Cursor should propose optimizations but never modify unrelated files.
+
+# --- Testing Rules ----------------------------------
+- Use Jest/Vitest for unit tests.
+- Use Playwright for E2E tests.
+- API tests must simulate:
+  - Authenticated user
+  - Invalid payload
+  - File upload
+  - Dictionary application
+
+# --- Performance Rules -------------------------------
+- Never load large audio files into memory unnecessarily.
+- Use streaming upload when possible.
+- Use pagination for transcription history.
+- Avoid N+1 queries by using Prisma includes/selects.
+
+# --- Deployment Rules -------------------------------
+- Build must succeed without manual intervention.
+- Use Railway or Vercel environment variables.
+- Prisma generate must run before build.
+
+# --- Code Quality Rules ------------------------------
+- Run ESLint + Prettier before committing.
+- No unused variables.
+- No console.logs in production code (except error logs).
+- Keep components <200 lines where possible.
+- Extract repeating code into /lib/utils.ts.
+
+# --- Additional Cursor Behavior ----------------------
+- When asked to generate code, Cursor must:
+  1. Follow this architecture.
+  2. Use strong TypeScript types.
+  3. Include Zod validation.
+  4. Produce production-grade, clean code.
+  5. Add comments explaining complex logic.
+  6. Never create global mutable state.
+
+# --- End of Rules -----------------------------------
